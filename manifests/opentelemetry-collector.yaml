@@ -78,7 +78,7 @@ spec:
     service:
       pipelines:
         metrics:
-          receivers: [prometheus]
+          receivers: [prometheus/static]
           processors: []
           exporters: [debug,prometheus]
 ---
