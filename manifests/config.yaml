@@ -1,0 +1,46 @@
+# docker run --rm -it -p 4318:4318 -p 8888:8888  -v /home/ploffay/projects/pavolloffay/prometheus-example-app/manifests:/tmp ghcr.io/open-telemetry/opentelemetry-collector-releases/opentelemetry-collector:0.92.0 --config /tmp/config.yaml
+receivers:
+  prometheus/static:
+    config:
+      scrape_configs:
+        - job_name: 'app'
+          scrape_interval: 10s
+          static_configs:
+            - targets: [ 'prometheus-example-app:80' ]
+
+  prometheus/k8s:
+    config:
+      scrape_configs:
+        - job_name: k8s
+          scrape_interval: 10s
+          kubernetes_sd_configs:
+            - role: pod
+              selectors:
+                - role: pod
+                  label: "app.kubernetes.io/name=prometheus-example-app"
+
+  prometheus/ta:
+    config:
+      scrape_configs:
+        - job_name: 'otel-collector'
+          scrape_interval: 10s
+          static_configs:
+            - targets: [ '0.0.0.0:8888' ]
+          metric_relabel_configs:
+            - action: labeldrop
+              regex: (id|name)
+              replacement: $$1
+            - action: labelmap
+              regex: label_(.+)
+              replacement: $$1
+
+exporters:
+  debug:
+    verbosity: detailed
+
+service:
+  pipelines:
+    metrics:
+      receivers: [prometheus/static]
+      processors: []
+      exporters: [debug]

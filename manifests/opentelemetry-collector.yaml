@@ -1,0 +1,124 @@
+# Needed for prometheus service discovery
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: discoverer
+rules:
+  - apiGroups: [""]
+    resources:
+      - nodes
+      - services
+      - endpoints
+      - pods
+    verbs: ["get", "list", "watch"]
+  - apiGroups:
+      - extensions
+    resources:
+      - ingresses
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: prometheus-discoverer
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: discoverer
+subjects:
+  - kind: ServiceAccount
+    name: otel-collector
+    namespace: default
+---
+apiVersion: opentelemetry.io/v1alpha1
+kind: OpenTelemetryCollector
+metadata:
+  name: otel
+spec:
+  mode: deployment
+  targetAllocator:
+    enabled: false
+    prometheusCR:
+      enabled: true
+      scrapeInterval: 5s
+#      serviceMonitorSelector:
+#        name: prometheus-example-app
+  config: |
+    receivers:
+      prometheus/static:
+        config:
+          scrape_configs:
+            - job_name: 'app'
+              scrape_interval: 5s
+              static_configs:
+                - targets: [ 'prometheus-example-app:80' ]
+    
+      prometheus/k8s:
+        config:
+          scrape_configs:
+            - job_name: k8s
+              scrape_interval: 10s
+              kubernetes_sd_configs:
+                - role: pod
+                  selectors:
+                    - role: pod
+                      label: "app.kubernetes.io/name=prometheus-example-app"
+
+      prometheus:
+        config:
+          scrape_configs: []
+
+    exporters:
+      debug:
+        verbosity: detailed
+      prometheus:
+        endpoint: 0.0.0.0:8989
+        metric_expiration: 10m
+
+    service:
+      pipelines:
+        metrics:
+          receivers: [prometheus]
+          processors: []
+          exporters: [debug,prometheus]
+---
+# Give TA correct RBAC
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: otel-targetallocator
+rules:
+  - apiGroups: [""]
+    resources:
+      - nodes
+      - services
+      - endpoints
+      - pods
+    verbs: ["get", "list", "watch"]
+  - apiGroups:
+      - extensions
+    resources:
+      - ingresses
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["monitoring.coreos.com"]
+    resources:
+      - servicemonitors
+      - podmonitors
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["discovery.k8s.io"]
+    resources:
+      - endpointslices
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: otel-targetallocator
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: otel-targetallocator
+subjects:
+  - kind: ServiceAccount
+    name: otel-targetallocator
+    namespace: default

@@ -8,7 +8,7 @@ A Docker image is available at: `quay.io/brancz/prometheus-example-app:v0.3.0`
 
 ## Deploying in a Kubernetes cluster
 
-First, deploy one instance of this example application, which listens and exposes metrics on port 8080 using the following [Deployment manifest](manifests/deployment.yaml).
+First, deploy one instance of this example application, which listens and exposes metrics on port 8080 using the following [Deployment manifest](manifests/app.yaml).
 
 Then, in order for Prometheus to be able to discover and scrape these metrics, in this repository we provide [Pod Monitor][prometheus-operator-crd] custom resource as an example. For that, [Prometheus Operator][prometheus-operator] needs to be running in the cluster. To install it, follow this guide: [quickstart][prometheus-operator-quickstart].
 
