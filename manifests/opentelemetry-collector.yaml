@@ -64,10 +64,6 @@ spec:
                     - role: pod
                       label: "app.kubernetes.io/name=prometheus-example-app"
 
-      prometheus:
-        config:
-          scrape_configs: []
-
     exporters:
       debug:
         verbosity: detailed
